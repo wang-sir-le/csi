@@ -1,0 +1,40 @@
+{
+  "model_path": "data\\multi_group\\models\\csi_state_classifier.joblib",
+  "feature_cols": [
+    "amp_mean",
+    "amp_std",
+    "amp_min",
+    "amp_max",
+    "amp_median",
+    "amp_p25",
+    "amp_p75",
+    "time_mean_std",
+    "time_mean_range",
+    "time_diff_mean_abs",
+    "time_zero_crossing",
+    "subcarrier_std_mean",
+    "subcarrier_std_max",
+    "subcarrier_mean_peak",
+    "fft_dominant_bin",
+    "fft_energy",
+    "band1_mean",
+    "band1_std",
+    "band2_mean",
+    "band2_std",
+    "band3_mean",
+    "band3_std",
+    "band4_mean",
+    "band4_std"
+  ],
+  "labels": [
+    "无人",
+    "翻滚",
+    "静止"
+  ],
+  "n_classes": 3,
+  "n_samples": 270,
+  "n_groups": 16,
+  "cv_method": "GroupKFold",
+  "accuracy": 1.0,
+  "macro_f1": 1.0
+}

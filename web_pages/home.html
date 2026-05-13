@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>个人主页 - 无源 WiFi 睡眠监测</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      color: #f8fbff;
+      background:
+        linear-gradient(115deg, rgba(8,31,44,.72), rgba(30,48,64,.40)),
+        url('/assets/forest.jpeg') center / cover fixed;
+    }
+    a { color: inherit; text-decoration: none; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 236px 1fr; background: linear-gradient(180deg, rgba(5,16,22,.28), rgba(5,16,22,.58)); transition: filter .2s ease; }
+    .app.locked { filter: blur(7px); pointer-events: none; }
+    .side { position: sticky; top: 0; height: 100vh; padding: 24px 18px; border-right: 1px solid rgba(255,255,255,.16); background: rgba(7,16,22,.62); backdrop-filter: blur(22px); }
+    .logo { font-size: 22px; font-weight: 900; margin-bottom: 28px; }
+    .nav { display: grid; gap: 8px; }
+    .nav a { padding: 13px 14px; border-radius: 8px; color: rgba(248,251,255,.76); font-weight: 700; }
+    .nav a.active, .nav a:hover { background: rgba(255,255,255,.13); color: #fff; }
+    main { max-width: 1120px; width: 100%; margin: 0 auto; padding: 26px clamp(18px,4vw,44px) 44px; }
+    .profile-hero { border: 1px solid rgba(255,255,255,.18); border-radius: 8px; overflow: hidden; background: linear-gradient(rgba(10,18,24,.70), rgba(10,18,24,.70)), url('/assets/profile_sleep_bg.jpg') center 45% / cover; box-shadow: 0 18px 55px rgba(0,0,0,.18); }
+    .cover { height: 210px; background: transparent; }
+    .profile { display: grid; grid-template-columns: 112px minmax(0,1fr) auto; gap: 22px; align-items: center; margin-top: 0; padding: 22px 28px 26px; background: transparent; }
+    .avatar { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #9ee7c5, #8bd4ff); border: 3px solid rgba(255,255,255,.22); color: #062019; font-size: 40px; font-weight: 900; overflow: hidden; box-shadow: 0 14px 36px rgba(0,0,0,.22); }
+    .avatar img, .avatar-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.18; }
+    .id { color: rgba(248,251,255,.60); margin-bottom: 10px; }
+    .bio { color: rgba(248,251,255,.82); line-height: 1.65; max-width: 620px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-self: start; padding-top: 4px; }
+    button, .btn { border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 11px 18px; color: #fff; background: rgba(255,255,255,.13); font-weight: 800; cursor: pointer; backdrop-filter: blur(16px); }
+    .primary { border: 0; color: #062019; background: linear-gradient(90deg, #9ee7c5, #dffff0); }
+    .stats { display: flex; gap: 22px; margin-top: 14px; flex-wrap: wrap; color: rgba(248,251,255,.80); }
+    .stats b { font-size: 19px; margin-right: 5px; }
+    .live { margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .metric, .work { border: 1px solid rgba(255,255,255,.22); background: linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.09)); backdrop-filter: blur(22px); border-radius: 8px; }
+    .metric { padding: 18px; }
+    .metric span { color: rgba(248,251,255,.68); font-size: 13px; }
+    .metric b { display: block; margin-top: 8px; font-size: 28px; }
+    .history { margin-top: 18px; padding: 18px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; background: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.08)); backdrop-filter: blur(22px); }
+    .history h2 { margin: 0 0 12px; font-size: 20px; }
+    .history-list { display: grid; gap: 10px; }
+    .history-row { display: grid; grid-template-columns: minmax(170px, 1.2fr) repeat(4, minmax(90px, .8fr)); gap: 12px; align-items: center; padding: 12px; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; background: rgba(255,255,255,.08); }
+    .history-row.clickable { cursor: pointer; transition: transform .16s ease, background .16s ease, border-color .16s ease; }
+    .history-row.clickable:hover { transform: translateY(-1px); background: rgba(158,231,197,.13); border-color: rgba(158,231,197,.34); }
+    .history-row.short-record { opacity: .84; }
+    .history-row b { display: block; margin-bottom: 3px; }
+    .history-row span { color: rgba(248,251,255,.64); font-size: 13px; }
+    .record-badge { display: inline-flex; align-items: center; width: fit-content; margin-top: 5px; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(255,255,255,.13); color: rgba(248,251,255,.78); }
+    .record-badge.full { color: #062019; background: linear-gradient(90deg, #9ee7c5, #dffff0); }
+    .sleep-report { display: grid; gap: 14px; }
+    .report-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .report-card { padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08); }
+    .report-card span { display: block; color: rgba(248,251,255,.62); font-size: 12px; margin-bottom: 7px; }
+    .report-card b { font-size: 20px; }
+    .report-section { padding: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07); line-height: 1.8; color: rgba(248,251,255,.84); }
+    .report-section h3 { margin: 0 0 8px; color: #fff; font-size: 18px; }
+    .tabs { display: flex; gap: 26px; border-bottom: 1px solid rgba(255,255,255,.16); margin-top: 28px; }
+    .tabs button { border: 0; border-radius: 0; background: transparent; padding: 16px 0; color: rgba(248,251,255,.62); }
+    .tabs button.active { color: #fff; border-bottom: 3px solid #fff; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .work { aspect-ratio: 9/12.5; overflow: hidden; position: relative; }
+    .work img, .work video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .work::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.55)); }
+    .work:nth-child(2n) { background: linear-gradient(145deg, rgba(17,43,37,.62), rgba(255,255,255,.08)); }
+    .work:nth-child(3n) { background: linear-gradient(145deg, rgba(44,37,76,.62), rgba(255,255,255,.08)); }
+    .work .label { position: absolute; left: 12px; right: 12px; bottom: 12px; line-height: 1.55; font-weight: 800; z-index: 1; }
+    .work .play { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,.35); border-radius: 999px; padding: 6px 9px; font-size: 12px; z-index: 1; }
+    .bar-row { margin-top: 12px; }
+    .bar { height: 8px; background: rgba(255,255,255,.14); border-radius: 999px; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: linear-gradient(90deg, #9ee7c5, #8bd4ff); }
+    .detail-modal { width: min(920px, 94vw); max-height: 88vh; }
+    .detail-media img, .detail-media video { width: 100%; max-height: 52vh; object-fit: cover; display: block; background: rgba(0,0,0,.24); }
+    .detail-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .detail-gallery img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px; display: block; }
+    .detail-content { white-space: pre-wrap; line-height: 1.9; color: rgba(248,251,255,.86); }
+    .detail-meta { color: rgba(248,251,255,.62); margin-top: 6px; }
+    .comments { border-top: 1px solid rgba(255,255,255,.12); padding: 18px 20px 22px; }
+    .comments h3 { margin: 0 0 12px; font-size: 20px; }
+    .comment-list { display: grid; gap: 10px; margin-bottom: 14px; }
+    .comment-item { padding: 12px; border-radius: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+    .comment-item b { color: #9ee7c5; }
+    .comment-item span { color: rgba(248,251,255,.58); font-size: 12px; margin-left: 8px; }
+    .comment-item div { margin-top: 6px; line-height: 1.7; color: rgba(248,251,255,.84); }
+    .comment-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+    .comment-form textarea { min-height: 46px; margin: 0; resize: vertical; }
+    .auth-mask { position: fixed; inset: 0; display: none; place-items: center; padding: 20px; background: rgba(3,8,13,.56); backdrop-filter: blur(10px); z-index: 20; }
+    .auth-mask.show { display: grid; }
+    .auth-panel { width: min(430px, 100%); border: 1px solid rgba(255,255,255,.24); border-radius: 8px; padding: 24px; background: linear-gradient(145deg, rgba(12,26,35,.96), rgba(20,31,43,.90)); box-shadow: 0 30px 90px rgba(0,0,0,.36); }
+    .auth-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+    .close-x { width: 42px; height: 42px; border-radius: 50%; padding: 0; display: grid; place-items: center; font-size: 26px; line-height: 1; }
+    .auth-panel h2 { margin: 0 0 8px; font-size: 28px; }
+    .auth-panel p { margin: 0 0 18px; color: rgba(248,251,255,.70); line-height: 1.7; }
+    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .auth-tabs button { border-radius: 8px; }
+    .auth-tabs button.active { color: #062019; background: linear-gradient(90deg, #9ee7c5, #dffff0); }
+    label { display: block; margin: 12px 0 6px; color: rgba(248,251,255,.72); }
+    input { width: 100%; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; padding: 12px; color: #fff; background: rgba(255,255,255,.10); outline: none; }
+    .hidden { display: none; }
+    .auth-error { min-height: 22px; color: #ffb7c5; margin-top: 10px; }
+    .modal-mask { position: fixed; inset: 0; display: none; place-items: center; padding: 20px; background: rgba(3,8,13,.58); backdrop-filter: blur(10px); z-index: 18; }
+    .modal-mask.show { display: grid; }
+    .modal { width: min(560px, 100%); max-height: min(760px, 92vh); overflow: auto; border: 1px solid rgba(255,255,255,.24); border-radius: 8px; background: linear-gradient(145deg, rgba(12,26,35,.97), rgba(20,31,43,.92)); box-shadow: 0 30px 90px rgba(0,0,0,.36); }
+    .modal-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.14); background: rgba(12,26,35,.96); }
+    .modal-head h2 { margin: 0; font-size: 22px; }
+    .modal-body { padding: 20px; }
+    .edit-avatar { display: grid; place-items: center; gap: 10px; margin-bottom: 10px; }
+    .avatar-preview { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #9ee7c5, #8bd4ff); color: #062019; font-size: 34px; font-weight: 900; border: 4px solid rgba(255,255,255,.18); overflow: hidden; }
+    .upload-btn { display: inline-flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 10px 16px; background: rgba(255,255,255,.12); font-weight: 800; cursor: pointer; }
+    .form-grid { display: grid; gap: 12px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .danger { color: #fff; background: rgba(255,95,126,.22); border-color: rgba(255,95,126,.42); }
+    .settings-list { display: grid; gap: 12px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; background: rgba(255,255,255,.08); }
+    .settings-row span { color: rgba(248,251,255,.68); font-size: 13px; }
+    .account-list { display: grid; gap: 10px; }
+    .account-row { width: 100%; display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 12px; background: rgba(255,255,255,.08); text-align: left; }
+    .account-row:hover { background: rgba(255,255,255,.14); }
+    .account-row .dm-avatar { width: 52px; height: 52px; }
+    .account-meta b { display: block; color: #fff; margin-bottom: 4px; }
+    .account-meta span, .account-current { color: rgba(248,251,255,.62); font-size: 13px; }
+    .switch-footer { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.14); display: grid; gap: 10px; }
+    .dm-modal { width: min(980px, 94vw); height: min(680px, 88vh); display: grid; grid-template-columns: 300px minmax(0,1fr); overflow: hidden; }
+    .dm-list { border-right: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); overflow: auto; }
+    .dm-title { padding: 18px; font-size: 22px; font-weight: 900; border-bottom: 1px solid rgba(255,255,255,.14); }
+    .dm-contact { width: 100%; display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: center; border: 0; border-radius: 0; padding: 14px 16px; background: transparent; text-align: left; }
+    .dm-contact.active, .dm-contact:hover { background: rgba(255,255,255,.12); }
+    .dm-avatar { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: linear-gradient(135deg, #9ee7c5, #8bd4ff); color: #062019; font-weight: 900; }
+    .dm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .dm-name { font-weight: 900; color: #fff; }
+    .dm-last { color: rgba(248,251,255,.58); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dm-chat { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
+    .dm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.14); background: rgba(12,26,35,.94); }
+    .dm-head-user { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .dm-messages { padding: 18px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+    .dm-empty { margin: auto; color: rgba(248,251,255,.60); }
+    .bubble { max-width: min(72%, 520px); padding: 11px 14px; border-radius: 8px; line-height: 1.6; background: rgba(255,255,255,.12); }
+    .bubble.me { align-self: flex-end; color: #062019; background: linear-gradient(90deg, #9ee7c5, #dffff0); }
+    .bubble.other { align-self: flex-start; }
+    .bubble-time { margin-top: 4px; font-size: 11px; opacity: .62; }
+    .dm-compose { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px; border-top: 1px solid rgba(255,255,255,.14); background: rgba(12,26,35,.90); }
+    .dm-compose textarea { min-height: 48px; max-height: 120px; resize: vertical; margin: 0; }
+    @media (max-width: 760px) { .dm-modal { grid-template-columns: 1fr; } .dm-list { display: none; } }
+    @media (max-width: 900px) { .app { grid-template-columns: 1fr; } .side { position: static; height: auto; } .cover { height: 170px; } .profile { grid-template-columns: 88px 1fr; padding: 18px; gap: 16px; } .avatar { width: 86px; height: 86px; font-size: 32px; } .actions { grid-column: 1 / -1; justify-content: flex-start; padding-top: 0; } .live { grid-template-columns: 1fr; } .history-row { grid-template-columns: 1fr 1fr; } .report-grid { grid-template-columns: 1fr 1fr; } .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .profile { grid-template-columns: 1fr; } .avatar { width: 92px; height: 92px; } h1 { font-size: 28px; } }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.032) 1px, transparent 1px);
+      background-size: 68px 68px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,.72), transparent 78%);
+    }
+    .side {
+      background:
+        linear-gradient(180deg, rgba(7,16,22,.82), rgba(7,16,22,.52)),
+        rgba(7,16,22,.62);
+    }
+    .logo {
+      letter-spacing: 0;
+      text-shadow: 0 10px 26px rgba(0,0,0,.32);
+    }
+    .nav a, button, .btn, .upload-btn, .account-row, .dm-contact {
+      transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    .nav a:hover, button:hover, .btn:hover, .upload-btn:hover, .account-row:hover, .dm-contact:hover {
+      transform: translateY(-1px);
+      border-color: rgba(158,231,197,.42);
+    }
+    .profile-hero {
+      position: relative;
+      isolation: isolate;
+    }
+    .profile-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(158,231,197,.20), transparent 28%),
+        radial-gradient(circle at 82% 8%, rgba(139,212,255,.16), transparent 22%);
+    }
+    h1 {
+      text-wrap: balance;
+      text-shadow: 0 12px 30px rgba(0,0,0,.32);
+    }
+    .bio { text-wrap: pretty; }
+    .avatar, .avatar-preview, .dm-avatar {
+      box-shadow: 0 16px 42px rgba(0,0,0,.24), 0 0 0 1px rgba(255,255,255,.16) inset;
+    }
+    .metric, .history, .work, .report-card, .report-section, .settings-row, .comment-item {
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .metric:hover, .history-row.clickable:hover, .work:hover, .report-card:hover, .settings-row:hover {
+      transform: translateY(-2px);
+      border-color: rgba(158,231,197,.36);
+      background: rgba(255,255,255,.13);
+    }
+    .metric b, .report-card b {
+      overflow-wrap: anywhere;
+    }
+    .work {
+      box-shadow: 0 16px 44px rgba(0,0,0,.20);
+    }
+    .work img, .work video {
+      transition: transform .35s ease, filter .35s ease;
+    }
+    .work:hover img, .work:hover video {
+      transform: scale(1.045);
+      filter: saturate(1.08) contrast(1.04);
+    }
+    .tabs button.active {
+      border-bottom-color: #9ee7c5;
+      color: #9ee7c5;
+    }
+    input, textarea {
+      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    input:focus, textarea:focus {
+      border-color: rgba(158,231,197,.52);
+      background: rgba(255,255,255,.14);
+      box-shadow: 0 0 0 3px rgba(158,231,197,.10);
+    }
+    .modal, .auth-panel {
+      box-shadow: 0 34px 110px rgba(0,0,0,.42);
+    }
+    @media (max-width: 900px) {
+      .side { padding: 16px; }
+      .nav { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .nav a { text-align: center; }
+    }
+    @media (max-width: 560px) {
+      main { padding-inline: 14px; }
+      .history-row, .report-grid, .grid { grid-template-columns: 1fr; }
+      .comment-form, .dm-compose { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app">
+    <aside class="side">
+      <div class="logo">WiFiSleep</div>
+      <nav class="nav">
+        <a href="/">实时看板</a>
+        <a class="active" href="/home">个人主页</a>
+        <a href="/community">社区</a>
+      </nav>
+    </aside>
+    <main>
+      <section class="profile-hero">
+        <div class="cover"></div>
+        <div class="profile">
+          <div id="avatar" class="avatar">眠</div>
+          <div>
+            <h1 id="nickname">睡眠观察员</h1>
+            <div id="userId" class="id">@demo - 无源 WiFi 微动监测</div>
+            <div id="bio" class="bio">用 WiFi CSI 记录睡眠、静止、翻滚与环境状态。这里展示我的监测作品、喜欢内容和社区记录。</div>
+            <div class="stats">
+              <span><b id="worksCount">0</b>作品</span>
+              <span><b id="likes">0</b>获赞</span>
+              <span><b id="likedCount">0</b>喜欢</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button onclick="openEditProfile()">编辑资料</button>
+            <button onclick="openSettings()">设置</button>
+          </div>
+        </div>
+      </section>
+      <section class="live">
+        <div class="metric"><span>当前稳定状态</span><b id="stable">等待数据</b></div>
+        <div class="metric"><span title="成功解析并通过格式校验的 CSI 数据包数量">有效数据包</span><b id="packets">0</b></div>
+        <div class="metric"><span>最高置信度</span><b id="confidence">--</b></div>
+      </section>
+      <section class="history">
+        <h2>近 7 天睡眠记录</h2>
+        <div id="historyList" class="history-list">
+          <div class="history-row"><div><b>暂无睡眠记录</b><span>开启监测并关闭后会自动保存本次睡眠摘要。</span></div></div>
+        </div>
+      </section>
+      <div class="tabs">
+        <button class="active" onclick="showTab('works', this)">作品</button>
+        <button onclick="showTab('likes', this)">喜欢</button>
+      </div>
+      <section id="works" class="grid"></section>
+    </main>
+  </div>
+  <section id="authMask" class="auth-mask">
+    <div class="auth-panel">
+      <div class="auth-top">
+        <h2>先登录个人主页</h2>
+        <button class="close-x" onclick="exitAuth()" aria-label="关闭">×</button>
+      </div>
+      <p>已有账号直接登录；没有账号先注册，注册完成后会自动进入个人主页。</p>
+      <div class="auth-tabs">
+        <button id="loginTab" class="active" onclick="setMode('login')">登录</button>
+        <button id="registerTab" onclick="setMode('register')">注册</button>
+      </div>
+      <div id="registerFields" class="hidden">
+        <label>昵称</label>
+        <input id="nicknameInput" placeholder="例如：睡眠观察员" />
+      </div>
+      <label>账号</label>
+      <input id="usernameInput" placeholder="请输入账号" />
+      <label>密码</label>
+      <input id="passwordInput" type="password" placeholder="请输入密码" />
+      <div id="authError" class="auth-error"></div>
+      <button class="primary" style="width:100%; margin-top:8px" onclick="submitAuth()">进入个人主页</button>
+    </div>
+  </section>
+  <section id="editMask" class="modal-mask">
+    <div class="modal">
+      <div class="modal-head">
+        <button onclick="closeEditProfile()">取消</button>
+        <h2>编辑资料</h2>
+        <button class="primary" onclick="saveProfileEdit()">保存</button>
+      </div>
+      <div class="modal-body">
+        <div class="edit-avatar">
+          <div id="editAvatarPreview" class="avatar-preview">眠</div>
+          <label class="upload-btn" for="avatarFile">上传头像图片</label>
+          <input id="avatarFile" class="hidden" type="file" accept="image/*" onchange="handleAvatarUpload(event)" />
+          <span style="color:rgba(248,251,255,.68)">支持上传本地图片，未上传时使用文字头像。</span>
+        </div>
+        <div class="form-grid">
+          <label>文字头像备用</label>
+          <input id="editAvatar" maxlength="2" placeholder="例如：眠" oninput="previewEditAvatar()" />
+          <label>昵称</label>
+          <input id="editNickname" placeholder="请输入昵称" />
+          <label>出生日期</label>
+          <input id="editBirthday" type="date" />
+          <label>简介</label>
+          <input id="editBio" placeholder="介绍你的睡眠监测记录" />
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="settingsMask" class="modal-mask">
+    <div class="modal">
+      <div class="modal-head">
+        <button onclick="closeSettings()">关闭</button>
+        <h2>设置</h2>
+        <span></span>
+      </div>
+      <div class="modal-body">
+        <div class="settings-list">
+          <div class="settings-row">
+            <div><b>当前账号</b><br><span id="settingsAccount">@demo</span></div>
+            <button onclick="closeSettings()">已登录</button>
+          </div>
+          <div class="settings-row">
+            <div><b>切换账号</b><br><span>返回登录/注册弹窗，使用其他账号进入个人主页。</span></div>
+            <button onclick="switchAccount()">切换</button>
+          </div>
+          <div class="settings-row">
+            <div><b>退出登录</b><br><span>退出后再次进入个人主页需要重新登录。</span></div>
+            <button class="danger" onclick="logout()">退出</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="switchMask" class="modal-mask">
+    <div class="modal">
+      <div class="modal-head">
+        <button onclick="closeSwitchAccount()">关闭</button>
+        <h2>切换账号</h2>
+        <span></span>
+      </div>
+      <div class="modal-body">
+        <div id="recentAccounts" class="account-list"></div>
+        <div class="switch-footer">
+          <button class="primary" onclick="loginOtherAccount()">登录/注册其他账号</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="dmMask" class="modal-mask">
+    <div class="modal dm-modal">
+      <aside class="dm-list">
+        <div class="dm-title">私信</div>
+        <div id="dmContacts"></div>
+      </aside>
+      <section class="dm-chat">
+        <div class="dm-head">
+          <div class="dm-head-user">
+            <div id="dmAvatar" class="dm-avatar">私</div>
+            <div>
+              <div id="dmName" class="dm-name">选择会话</div>
+              <div class="dm-last">站内私信</div>
+            </div>
+          </div>
+          <button class="close-x" onclick="closeDm()" aria-label="关闭">×</button>
+        </div>
+        <div id="dmMessages" class="dm-messages"></div>
+        <div class="dm-compose">
+          <textarea id="dmText" placeholder="发送私信"></textarea>
+          <button class="primary" onclick="sendDm()">发送</button>
+        </div>
+      </section>
+    </div>
+  </section>
+  <section id="detailMask" class="modal-mask" onclick="closeWorkDetail()">
+    <div class="modal detail-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <button onclick="closeWorkDetail()">关闭</button>
+        <div>
+          <h2 id="detailTitle">作品详情</h2>
+          <div id="detailMeta" class="detail-meta"></div>
+        </div>
+        <span></span>
+      </div>
+      <div id="detailMedia" class="detail-media"></div>
+      <div id="detailContent" class="modal-body detail-content"></div>
+      <section class="comments">
+        <h3>评论</h3>
+        <div id="detailComments" class="comment-list"></div>
+        <div class="comment-form">
+          <textarea id="commentText" placeholder="写下你的评论"></textarea>
+          <button onclick="submitComment()">发布评论</button>
+        </div>
+      </section>
+    </div>
+  </section>
+  <section id="sleepDetailMask" class="modal-mask" onclick="closeSleepDetail()">
+    <div class="modal detail-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <button onclick="closeSleepDetail()">关闭</button>
+        <div>
+          <h2 id="sleepDetailTitle">睡眠详情</h2>
+          <div id="sleepDetailMeta" class="detail-meta"></div>
+        </div>
+        <span></span>
+      </div>
+      <div id="sleepDetailBody" class="modal-body sleep-report"></div>
+    </div>
+  </section>
+  <script>
+    const defaultUser = { username:'demo', nickname:'睡眠观察员', avatar:'眠', avatarImage:'', bio:'用 WiFi CSI 记录睡眠、静止、翻滚与环境状态。这里展示我的监测作品、喜欢内容和社区记录。' };
+    let mode = 'login';
+    let user = null;
+    let loginUser = null;
+    let isOwnProfile = true;
+    let pendingAvatarImage = '';
+    let activeDmUser = '';
+    let profilePosts = null;
+    let likedPosts = null;
+    let favoritePosts = null;
+    let visibleWorks = [];
+    let detectionHistory = [];
+    let activeDetailPostId = '';
+    const MIN_SLEEP_DETAIL_SECONDS = 3 * 60 * 60;
+    let lastHistoryRefresh = 0;
+    const emptyText = {
+      works: '还没有发布作品',
+      likes: '还没有喜欢的作品'
+    };
+    function loadUsers() { return JSON.parse(localStorage.getItem('csi_users') || '{}'); }
+    function saveUsers(users) { localStorage.setItem('csi_users', JSON.stringify(users)); }
+    async function apiJson(url, options = {}) {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.detail || data.message || '请求失败');
+      return data;
+    }
+    function normalizeApiUser(apiUser) {
+      if (!apiUser) return null;
+      return {
+        username: apiUser.username,
+        nickname: apiUser.nickname,
+        avatar: apiUser.avatar_text || (apiUser.nickname || apiUser.username || '眠').slice(0, 1),
+        avatarImage: apiUser.avatar_url || '',
+        birthday: apiUser.birthday || '',
+        bio: apiUser.bio || '',
+        source: 'mysql'
+      };
+    }
+    function mirrorUser(profile, password = '') {
+      const users = loadUsers();
+      users[profile.username] = { ...users[profile.username], ...profile, password: password || users[profile.username]?.password || '' };
+      saveUsers(users);
+    }
+    function loadRecentAccounts() { return JSON.parse(localStorage.getItem('csi_recent_accounts') || '[]'); }
+    function saveRecentAccounts(accounts) { localStorage.setItem('csi_recent_accounts', JSON.stringify([...new Set(accounts)])); }
+    function rememberAccount(username) {
+      const recent = loadRecentAccounts().filter(name => name !== username);
+      recent.unshift(username);
+      saveRecentAccounts(recent.slice(0, 8));
+    }
+    function publicUser(username) {
+      const users = loadUsers();
+      const found = users[username];
+      if (found) return { ...found, password: undefined };
+      return { username, nickname: username, avatar: (username || '私').slice(0,1), avatarImage:'', bio:'' };
+    }
+    function setMode(next) {
+      mode = next;
+      document.getElementById('loginTab').classList.toggle('active', mode === 'login');
+      document.getElementById('registerTab').classList.toggle('active', mode === 'register');
+      document.getElementById('registerFields').classList.toggle('hidden', mode !== 'register');
+      document.getElementById('authError').textContent = '';
+    }
+    async function submitAuth() {
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
+      const nickname = document.getElementById('nicknameInput').value.trim() || username;
+      const users = loadUsers();
+      if (!username || !password) {
+        document.getElementById('authError').textContent = '请填写账号和密码。';
+        return;
+      }
+      try {
+        const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
+        const payload = mode === 'register'
+          ? { username, password, nickname, avatar_text: nickname.slice(0, 1), bio: '用 WiFi CSI 记录睡眠与微动状态。' }
+          : { username, password };
+        const data = await apiJson(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+        const profile = normalizeApiUser(data.user);
+        localStorage.setItem('csi_user', JSON.stringify(profile));
+        mirrorUser(profile, password);
+        rememberAccount(username);
+        document.getElementById('authMask').classList.remove('show');
+        document.getElementById('app').classList.remove('locked');
+        init();
+        return;
+      } catch (error) {
+        if (String(error.message || '').includes('缺少 pymysql') || String(error.message || '').includes('connect') || String(error.message || '').includes('503')) {
+          console.warn('MySQL API 不可用，暂时使用本地演示登录。', error);
+        } else {
+          document.getElementById('authError').textContent = error.message || '登录失败。';
+          return;
+        }
+      }
+
+      if (mode === 'register') {
+        if (users[username]) {
+          document.getElementById('authError').textContent = '账号已存在，请直接登录。';
+          return;
+        }
+        users[username] = { username, password, nickname, avatar: nickname.slice(0,1), avatarImage: '', birthday: '', bio: '用 WiFi CSI 记录睡眠与微动状态。' };
+        saveUsers(users);
+      } else if (!users[username]) {
+        document.getElementById('authError').textContent = '账号不存在，请先注册。';
+        return;
+      }
+      if (users[username].password !== password) {
+        document.getElementById('authError').textContent = '密码不正确。';
+        return;
+      }
+      const profile = { ...users[username], loginAt: new Date().toISOString() };
+      delete profile.password;
+      localStorage.setItem('csi_user', JSON.stringify(profile));
+      rememberAccount(username);
+      document.getElementById('authMask').classList.remove('show');
+      document.getElementById('app').classList.remove('locked');
+      init();
+    }
+    function exitAuth() {
+      document.getElementById('authMask').classList.remove('show');
+      document.getElementById('app').classList.remove('locked');
+    }
+    function requireLogin() {
+      const saved = JSON.parse(localStorage.getItem('csi_user') || 'null');
+      const users = loadUsers();
+      if (saved && saved.source === 'mysql') return saved;
+      if (saved && (!saved.username || !users[saved.username])) {
+        localStorage.removeItem('csi_user');
+        return null;
+      }
+      return saved;
+    }
+    function openAuth() {
+      document.getElementById('authMask').classList.add('show');
+      document.getElementById('app').classList.add('locked');
+    }
+    function renderUser() {
+      renderAvatar(document.getElementById('avatar'), user.avatarImage, user.avatar || (user.nickname || '眠').slice(0,1));
+      document.getElementById('nickname').textContent = user.nickname || user.username || '睡眠观察员';
+      document.getElementById('userId').textContent = `@${user.username || 'demo'} - 无源 WiFi 微动监测`;
+      document.getElementById('bio').textContent = user.bio || defaultUser.bio;
+      document.getElementById('settingsAccount').textContent = `@${user.username || 'demo'}`;
+      renderProfileActions();
+      renderStats();
+    }
+    function renderProfileActions() {
+      const actions = document.querySelector('.actions');
+      if (!loginUser) {
+        actions.innerHTML = `
+          <button class="primary" onclick="openAuth()">登录/注册</button>
+          <a class="btn" href="/">返回看板</a>`;
+      } else if (isOwnProfile) {
+        actions.innerHTML = `
+          <button onclick="openEditProfile()">编辑资料</button>
+          <button onclick="openSettings()">设置</button>`;
+      } else {
+        actions.innerHTML = `
+          <button class="primary" onclick="messageViewedUser()">私信</button>
+          <a class="btn" href="/community">返回社区</a>`;
+      }
+    }
+    function renderAvatar(el, image, fallback) {
+      if (image) {
+        el.innerHTML = `<img src="${image}" alt="头像" />`;
+      } else {
+        el.textContent = fallback || '眠';
+      }
+    }
+    function loadPosts() {
+      return JSON.parse(localStorage.getItem('csi_posts') || '[]').filter(post => post.user !== '系统');
+    }
+    function toLocalPost(post) {
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content || '',
+        user: post.username,
+        likes: Number(post.likes_count || 0),
+        mediaData: post.media_url || '',
+        mediaType: post.media_type || '',
+        mediaName: post.media_name || '',
+        createdAt: post.created_at
+      };
+    }
+    async function refreshProfilePosts() {
+      profilePosts = null;
+      likedPosts = null;
+      favoritePosts = null;
+      detectionHistory = [];
+      if (!user || user.source !== 'mysql') return;
+      try {
+        const viewer = loginUser ? loginUser.username : '';
+        const data = await apiJson(`/api/posts?viewer=${encodeURIComponent(viewer)}&include_own=true`);
+        profilePosts = data.posts.map(toLocalPost);
+      } catch (error) {
+        console.warn('MySQL 主页作品接口不可用，使用本地作品兜底。', error);
+      }
+      if (isOwnProfile) {
+        try {
+          const data = await apiJson(`/api/users/${encodeURIComponent(user.username)}/liked-posts`);
+          likedPosts = data.posts.map(toLocalPost);
+        } catch (error) {
+          console.warn('MySQL 喜欢列表接口不可用，使用本地喜欢兜底。', error);
+        }
+        try {
+          const data = await apiJson(`/api/users/${encodeURIComponent(user.username)}/favorite-posts`);
+          favoritePosts = data.posts.map(toLocalPost);
+        } catch (error) {
+          console.warn('MySQL 收藏列表接口不可用，使用本地收藏兜底。', error);
+        }
+        try {
+          const data = await apiJson(`/api/users/${encodeURIComponent(user.username)}/detect-sessions?days=7`);
+          detectionHistory = data.sessions || [];
+        } catch (error) {
+          console.warn('MySQL 检测历史接口不可用。', error);
+        }
+      }
+    }
+    function userKey(suffix) {
+      return `csi_${suffix}_${user.username || 'demo'}`;
+    }
+    function loadUserList(suffix) {
+      return JSON.parse(localStorage.getItem(userKey(suffix)) || '[]');
+    }
+    function getUserWorks() {
+      return (profilePosts || loadPosts()).filter(post => post.user === user.username);
+    }
+    function getLikedWorks() {
+      if (likedPosts) return likedPosts;
+      const ids = loadUserList('liked_posts');
+      return (profilePosts || loadPosts()).filter(post => ids.includes(post.id));
+    }
+    function getCollectedWorks() {
+      if (favoritePosts) return favoritePosts;
+      const ids = loadUserList('saved_posts');
+      return (profilePosts || loadPosts()).filter(post => ids.includes(post.id));
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
+    }
+    function formatNumber(n) {
+      const value = Number(n || 0);
+      return value >= 10000 ? `${(value / 10000).toFixed(1)}w` : String(value);
+    }
+    function renderStats() {
+      const works = getUserWorks();
+      const receivedLikes = works.reduce((sum, post) => sum + Number(post.likes || 0), 0);
+      document.getElementById('worksCount').textContent = formatNumber(works.length);
+      document.getElementById('likes').textContent = formatNumber(receivedLikes);
+      document.getElementById('likedCount').textContent = formatNumber(getLikedWorks().length);
+    }
+    function formatDateTime(value) {
+      if (!value) return '--';
+      const date = new Date(String(value).replace(' ', 'T'));
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+    }
+    function formatDuration(start, end) {
+      const seconds = getDurationSeconds({ started_at: start, ended_at: end });
+      if (!seconds) return '--';
+      const minutes = Math.floor(seconds / 60);
+      const rest = seconds % 60;
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      if (hours) return `${hours}小时${mins}分钟`;
+      return minutes ? `${minutes}分钟${rest}秒` : `${rest}秒`;
+    }
+    function getDurationSeconds(item) {
+      if (!item || !item.started_at || !item.ended_at) return 0;
+      const started = new Date(String(item.started_at).replace(' ', 'T')).getTime();
+      const ended = new Date(String(item.ended_at).replace(' ', 'T')).getTime();
+      if (Number.isNaN(started) || Number.isNaN(ended)) return 0;
+      return Math.max(0, Math.round((ended - started) / 1000));
+    }
+    function isFullSleepRecord(item) {
+      return getDurationSeconds(item) >= MIN_SLEEP_DETAIL_SECONDS;
+    }
+    function sleepRecordLabel(item) {
+      return isFullSleepRecord(item) ? '完整睡眠，可查看详情' : '短时监测，仅保留摘要';
+    }
+    function sleepQuality(item) {
+      const duration = getDurationSeconds(item);
+      const summary = item.summary_json || {};
+      const state = item.stable_prediction || summary.stable_prediction || '等待数据';
+      const confidence = Number(summary.max_confidence || 0);
+      if (duration < MIN_SLEEP_DETAIL_SECONDS) return { level: '短时记录', text: '本次监测时长不足 3 小时，不能作为完整睡眠评估，仅用于记录当时状态。' };
+      if (state.includes('翻') || state.includes('不确定')) return { level: '睡眠波动较多', text: '监测过程中出现较多翻动或不稳定状态，提示睡眠连续性可能一般。' };
+      if (state.includes('静') && confidence >= 0.75) return { level: '整体较稳定', text: '本次睡眠期间主体状态较稳定，微动变化较少，睡眠连续性相对较好。' };
+      return { level: '状态一般', text: '本次睡眠记录可用于观察趋势，但状态稳定性和置信度仍需结合后续多晚数据判断。' };
+    }
+    function sleepAdvice(item) {
+      const duration = getDurationSeconds(item);
+      const summary = item.summary_json || {};
+      const state = item.stable_prediction || summary.stable_prediction || '';
+      if (duration < MIN_SLEEP_DETAIL_SECONDS) return '本次时长较短，建议在夜间正式睡眠时保持设备连续监测 3 小时以上，再查看完整睡眠详情。';
+      if (duration < 6 * 60 * 60) return '本次睡眠时长偏短，建议尽量固定入睡时间，减少睡前强光、手机和咖啡因刺激。';
+      if (state.includes('翻') || state.includes('不确定')) return '建议检查床旁设备摆放是否稳定，并关注睡前情绪、室温和噪声因素，后续连续记录可用于判断是否长期波动。';
+      return '本次记录整体稳定，建议继续保持规律作息，并连续积累一周数据，用于观察睡眠节律变化。';
+    }
+    function renderHistory() {
+      const target = document.getElementById('historyList');
+      if (!target) return;
+      if (!isOwnProfile) {
+        target.innerHTML = '<div class="history-row"><div><b>仅展示本人睡眠记录</b><span>访问其他用户主页时不显示睡眠监测记录。</span></div></div>';
+        return;
+      }
+      if (!detectionHistory.length) {
+        target.innerHTML = '<div class="history-row"><div><b>暂无睡眠记录</b><span>开启监测并关闭后会自动保存本次睡眠摘要。</span></div></div>';
+        return;
+      }
+      target.innerHTML = detectionHistory.map(item => {
+        const summary = item.summary_json || {};
+        const confidence = summary.max_confidence ? `${(Number(summary.max_confidence) * 100).toFixed(1)}%` : '--';
+        const full = isFullSleepRecord(item);
+        const click = full ? ` onclick="openSleepDetail(${item.id})"` : '';
+        return `
+          <div class="history-row ${full ? 'clickable' : 'short-record'}"${click}>
+            <div><b>${formatDateTime(item.started_at)}</b><span>结束：${formatDateTime(item.ended_at)}</span><em class="record-badge ${full ? 'full' : ''}">${sleepRecordLabel(item)}</em></div>
+            <div><b>${formatDuration(item.started_at, item.ended_at)}</b><span>睡眠监测时长</span></div>
+            <div><b>${item.packet_count || 0}</b><span>有效数据包</span></div>
+            <div><b>${item.stable_prediction || summary.stable_prediction || '等待数据'}</b><span>主要睡眠状态</span></div>
+            <div><b>${confidence}</b><span>最高置信度</span></div>
+          </div>`;
+      }).join('');
+    }
+    function openSleepDetail(id) {
+      const item = detectionHistory.find(record => String(record.id) === String(id));
+      if (!item || !isFullSleepRecord(item)) return;
+      const summary = item.summary_json || {};
+      const quality = sleepQuality(item);
+      const confidence = summary.max_confidence ? `${(Number(summary.max_confidence) * 100).toFixed(1)}%` : '--';
+      const state = item.stable_prediction || summary.stable_prediction || '等待数据';
+      document.getElementById('sleepDetailTitle').textContent = '睡眠详情';
+      document.getElementById('sleepDetailMeta').textContent = `${formatDateTime(item.started_at)} - ${formatDateTime(item.ended_at)}`;
+      document.getElementById('sleepDetailBody').innerHTML = `
+        <div class="report-grid">
+          <div class="report-card"><span>睡眠时长</span><b>${formatDuration(item.started_at, item.ended_at)}</b></div>
+          <div class="report-card"><span>主要状态</span><b>${escapeHtml(state)}</b></div>
+          <div class="report-card"><span>有效数据包</span><b>${item.packet_count || 0}</b></div>
+          <div class="report-card"><span>最高置信度</span><b>${confidence}</b></div>
+        </div>
+        <div class="report-section">
+          <h3>睡眠概况</h3>
+          本次监测时长已超过 3 小时，可作为一段完整睡眠记录。系统根据 WiFi CSI 微动信号，对睡眠期间的静止、翻动和不确定状态进行识别，并生成本次睡眠摘要。
+        </div>
+        <div class="report-section">
+          <h3>状态解读</h3>
+          <b>${escapeHtml(quality.level)}</b>：${escapeHtml(quality.text)}
+        </div>
+        <div class="report-section">
+          <h3>睡眠建议</h3>
+          ${escapeHtml(sleepAdvice(item))}
+        </div>
+      `;
+      document.getElementById('sleepDetailMask').classList.add('show');
+    }
+    function closeSleepDetail() {
+      document.getElementById('sleepDetailMask').classList.remove('show');
+    }
+    async function refreshDetectionHistory(force = false) {
+      if (!isOwnProfile || !user || !user.username) return;
+      const now = Date.now();
+      if (!force && now - lastHistoryRefresh < 15000) return;
+      lastHistoryRefresh = now;
+      try {
+        const data = await apiJson(`/api/users/${encodeURIComponent(user.username)}/detect-sessions?days=7`);
+        detectionHistory = data.sessions || [];
+        renderHistory();
+      } catch (error) {
+        console.warn('睡眠记录刷新失败。', error);
+      }
+    }
+    function currentTabItems(name) {
+      if (name === 'works') return getUserWorks();
+      if (name === 'likes') return getLikedWorks();
+      return [];
+    }
+    function firstMediaUrl(item) {
+      if (item.mediaType === 'application/json+multi-image') {
+        try {
+          const images = JSON.parse(item.mediaData || '[]');
+          return images.find(image => image && image.url)?.url || '';
+        } catch (error) {
+          return '';
+        }
+      }
+      return item.mediaData || '';
+    }
+    function detailMediaHtml(item) {
+      if (!item.mediaData) return '';
+      if (item.mediaType === 'application/json+multi-image') {
+        let images = [];
+        try { images = JSON.parse(item.mediaData || '[]'); } catch (error) { images = []; }
+        images = images.filter(image => image && image.url).slice(0, 9);
+        if (!images.length) return '';
+        return `<div class="modal-body detail-gallery">${images.map(image => `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.name || '作品图片')}" />`).join('')}</div>`;
+      }
+      if (item.mediaType && item.mediaType.startsWith('video/')) {
+        return `<video controls src="${escapeHtml(item.mediaData)}"></video>`;
+      }
+      return `<img src="${escapeHtml(item.mediaData)}" alt="作品媒体" />`;
+    }
+    function renderGrid(list, name = 'works') {
+      visibleWorks = list;
+      if (!list.length) {
+        document.getElementById('works').innerHTML = `<div class="metric" style="grid-column:1/-1">${emptyText[name]}</div>`;
+        return;
+      }
+      document.getElementById('works').innerHTML = list.map((item, i) => {
+        const title = item.title || item;
+        const likes = Number(item.likes || 0);
+        const mediaUrl = firstMediaUrl(item);
+        const media = mediaUrl
+          ? (item.mediaType && item.mediaType.startsWith('video/')
+            ? `<video src="${escapeHtml(mediaUrl)}" muted></video>`
+            : `<img src="${escapeHtml(mediaUrl)}" alt="作品媒体" />`)
+          : '';
+        return `
+        <article class="work" onclick="openWorkDetail('${item.id || i}')">
+          ${media}
+          <span class="play">${likes} 赞</span>
+          <div class="label">${escapeHtml(title)}<div class="bar-row"><div class="bar"><span style="width:${Math.min(100, likes * 8)}%"></span></div></div></div>
+        </article>`;
+      }).join('');
+    }
+    function openWorkDetail(postId) {
+      const item = visibleWorks.find((work, index) => String(work.id || index) === String(postId));
+      if (!item) return;
+      activeDetailPostId = item.id || '';
+      document.getElementById('detailTitle').textContent = item.title || '作品详情';
+      document.getElementById('detailMeta').textContent = `@${item.user || user.username || 'demo'} · ${item.createdAt ? new Date(item.createdAt).toLocaleString() : new Date().toLocaleString()} · ${Number(item.likes || 0)} 赞`;
+      document.getElementById('detailMedia').innerHTML = detailMediaHtml(item);
+      document.getElementById('detailContent').textContent = item.content || '暂无正文内容。';
+      document.getElementById('detailMask').classList.add('show');
+      renderComments(activeDetailPostId);
+    }
+    function closeWorkDetail() {
+      document.getElementById('detailMask').classList.remove('show');
+      activeDetailPostId = '';
+      document.getElementById('commentText').value = '';
+    }
+    function commentKey(postId) { return `csi_comments_${postId}`; }
+    function loadLocalComments(postId) { return JSON.parse(localStorage.getItem(commentKey(postId)) || '[]'); }
+    function saveLocalComments(postId, comments) { localStorage.setItem(commentKey(postId), JSON.stringify(comments)); }
+    function commentAuthorHtml(username) {
+      const name = username || 'demo';
+      if (loginUser && loginUser.username === name) return `<b>@${escapeHtml(name)}</b>`;
+      return `<a class="author-link" href="/home?user=${encodeURIComponent(name)}">@${escapeHtml(name)}</a>`;
+    }
+    function renderCommentList(comments) {
+      document.getElementById('detailComments').innerHTML = comments.map(comment => `
+        <article class="comment-item">
+          ${commentAuthorHtml(comment.username)}<span>${comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}</span>
+          <div>${escapeHtml(comment.content || '')}</div>
+        </article>
+      `).join('') || '<div class="detail-meta">暂无评论，来说第一句。</div>';
+    }
+    async function renderComments(postId) {
+      if (!postId) {
+        renderCommentList([]);
+        return;
+      }
+      try {
+        const data = await apiJson(`/api/posts/${encodeURIComponent(postId)}/comments`);
+        renderCommentList(data.comments || []);
+      } catch (error) {
+        console.warn('MySQL 评论接口不可用，使用本地评论兜底。', error);
+        renderCommentList(loadLocalComments(postId));
+      }
+    }
+    async function submitComment() {
+      if (!activeDetailPostId) return;
+      if (!loginUser) {
+        openAuth();
+        return;
+      }
+      const text = document.getElementById('commentText').value.trim();
+      if (!text) return alert('请输入评论内容。');
+      if (loginUser.source === 'mysql') {
+        try {
+          await apiJson(`/api/posts/${encodeURIComponent(activeDetailPostId)}/comments`, {
+            method: 'POST',
+            body: JSON.stringify({ post_id: activeDetailPostId, username: loginUser.username, content: text })
+          });
+          document.getElementById('commentText').value = '';
+          await renderComments(activeDetailPostId);
+          return;
+        } catch (error) {
+          console.warn('MySQL 评论发布失败，使用本地评论兜底。', error);
+        }
+      }
+      const comments = loadLocalComments(activeDetailPostId);
+      comments.push({ username: loginUser.username || 'demo', content: text, created_at: new Date().toISOString() });
+      saveLocalComments(activeDetailPostId, comments);
+      document.getElementById('commentText').value = '';
+      renderCommentList(comments);
+    }
+    function showTab(name, btn) {
+      document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      renderGrid(currentTabItems(name), name);
+    }
+    function openEditProfile() {
+      if (!isOwnProfile) return;
+      pendingAvatarImage = user.avatarImage || '';
+      document.getElementById('editAvatar').value = user.avatar || (user.nickname || '眠').slice(0,1);
+      document.getElementById('editNickname').value = user.nickname || user.username || '';
+      document.getElementById('editBirthday').value = user.birthday || '';
+      document.getElementById('editBio').value = user.bio || defaultUser.bio;
+      document.getElementById('avatarFile').value = '';
+      previewEditAvatar();
+      document.getElementById('editMask').classList.add('show');
+    }
+    function closeEditProfile() {
+      document.getElementById('editMask').classList.remove('show');
+    }
+    function previewEditAvatar() {
+      const avatar = document.getElementById('editAvatar').value.trim();
+      const nickname = document.getElementById('editNickname').value.trim();
+      renderAvatar(document.getElementById('editAvatarPreview'), pendingAvatarImage, avatar || (nickname || user.nickname || '眠').slice(0,1));
+    }
+    function handleAvatarUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件。');
+        event.target.value = '';
+        return;
+      }
+      if (file.size > 1024 * 1024) {
+        alert('头像图片建议小于 1MB。');
+        event.target.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingAvatarImage = String(reader.result || '');
+        previewEditAvatar();
+      };
+      reader.readAsDataURL(file);
+    }
+    function saveProfileEdit() {
+      const avatar = document.getElementById('editAvatar').value.trim();
+      const nickname = document.getElementById('editNickname').value.trim();
+      const birthday = document.getElementById('editBirthday').value;
+      const bio = document.getElementById('editBio').value.trim();
+      user = {
+        ...user,
+        avatar: avatar || (nickname || user.nickname || '眠').slice(0,1),
+        avatarImage: pendingAvatarImage,
+        nickname: nickname || user.nickname,
+        birthday,
+        bio: bio || user.bio || defaultUser.bio
+      };
+      localStorage.setItem('csi_user', JSON.stringify(user));
+      if (user.source === 'mysql') {
+        apiJson(`/api/users/${encodeURIComponent(user.username)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            nickname: user.nickname,
+            avatar_text: user.avatar,
+            avatar_url: user.avatarImage,
+            birthday: user.birthday,
+            bio: user.bio
+          })
+        }).catch(error => console.warn('资料暂未同步到 MySQL。', error));
+      }
+      const users = loadUsers();
+      if (users[user.username]) {
+        users[user.username] = { ...users[user.username], avatar: user.avatar, avatarImage: user.avatarImage, nickname: user.nickname, birthday: user.birthday, bio: user.bio };
+        saveUsers(users);
+      }
+      renderUser();
+      closeEditProfile();
+    }
+    function openSettings() {
+      if (!isOwnProfile) return;
+      document.getElementById('settingsAccount').textContent = `@${user.username || 'demo'}`;
+      document.getElementById('settingsMask').classList.add('show');
+    }
+    function messageViewedUser() {
+      if (!loginUser) {
+        openAuth();
+        return;
+      }
+      openDm(user.username || 'demo');
+    }
+    function loadMessages() {
+      return JSON.parse(localStorage.getItem('csi_messages') || '[]');
+    }
+    function saveMessages(messages) {
+      localStorage.setItem('csi_messages', JSON.stringify(messages));
+    }
+    function conversationPartner(message) {
+      if (!loginUser) return '';
+      if (message.from === loginUser.username) return message.to;
+      if (message.to === loginUser.username) return message.from;
+      return '';
+    }
+    function openDm(targetUsername) {
+      activeDmUser = targetUsername;
+      document.getElementById('dmMask').classList.add('show');
+      renderDm();
+      document.getElementById('dmText').focus();
+    }
+    function closeDm() {
+      document.getElementById('dmMask').classList.remove('show');
+    }
+    function renderDm() {
+      if (!loginUser) return;
+      const messages = loadMessages();
+      const partners = [...new Set(messages.map(conversationPartner).filter(Boolean))];
+      if (activeDmUser && !partners.includes(activeDmUser)) partners.unshift(activeDmUser);
+      document.getElementById('dmContacts').innerHTML = partners.map(name => {
+        const profile = publicUser(name);
+        const last = [...messages].reverse().find(m => conversationPartner(m) === name);
+        const avatar = profile.avatarImage ? `<img src="${profile.avatarImage}" alt="头像" />` : (profile.avatar || name.slice(0,1));
+        return `
+          <button class="dm-contact ${name === activeDmUser ? 'active' : ''}" onclick="openDm('${name}')">
+            <span class="dm-avatar">${avatar}</span>
+            <span><span class="dm-name">${profile.nickname || name}</span><span class="dm-last">${last ? last.text : '开始聊天'}</span></span>
+          </button>`;
+      }).join('') || '<div class="dm-empty">暂无会话</div>';
+      const target = publicUser(activeDmUser || partners[0] || '');
+      if (!activeDmUser && partners[0]) activeDmUser = partners[0];
+      renderAvatar(document.getElementById('dmAvatar'), target.avatarImage, target.avatar || (target.nickname || '私').slice(0,1));
+      document.getElementById('dmName').textContent = target.nickname || target.username || '选择会话';
+      const thread = messages.filter(m =>
+        (m.from === loginUser.username && m.to === activeDmUser) ||
+        (m.from === activeDmUser && m.to === loginUser.username)
+      );
+      document.getElementById('dmMessages').innerHTML = thread.map(m => `
+        <div class="bubble ${m.from === loginUser.username ? 'me' : 'other'}">
+          <div>${m.text}</div>
+          <div class="bubble-time">${m.time || ''}</div>
+        </div>
+      `).join('') || '<div class="dm-empty">还没有消息，发一条私信开始交流。</div>';
+      const box = document.getElementById('dmMessages');
+      box.scrollTop = box.scrollHeight;
+    }
+    function sendDm() {
+      if (!loginUser || !activeDmUser) return;
+      const text = document.getElementById('dmText').value.trim();
+      if (!text) return;
+      const messages = loadMessages();
+      messages.push({ from: loginUser.username, to: activeDmUser, text, time: new Date().toLocaleString() });
+      saveMessages(messages);
+      document.getElementById('dmText').value = '';
+      renderDm();
+    }
+    function closeSettings() {
+      document.getElementById('settingsMask').classList.remove('show');
+    }
+    function logout() {
+      localStorage.removeItem('csi_user');
+      closeSettings();
+      user = null;
+      requireLogin();
+    }
+    function switchAccount() {
+      closeSettings();
+      renderRecentAccounts();
+      document.getElementById('switchMask').classList.add('show');
+    }
+    function closeSwitchAccount() {
+      document.getElementById('switchMask').classList.remove('show');
+    }
+    function renderRecentAccounts() {
+      const users = loadUsers();
+      const current = loginUser && loginUser.username;
+      const recent = loadRecentAccounts().filter(name => users[name]);
+      if (recent.length !== loadRecentAccounts().length) saveRecentAccounts(recent);
+      document.getElementById('recentAccounts').innerHTML = recent.map(name => {
+        const account = users[name];
+        const avatar = account.avatarImage ? `<img src="${account.avatarImage}" alt="头像" />` : (account.avatar || name.slice(0,1));
+        return `
+          <button class="account-row" onclick="selectAccount('${name}')">
+            <span class="dm-avatar">${avatar}</span>
+            <span class="account-meta"><b>${account.nickname || name}</b><span>@${name}</span></span>
+            <span class="account-current">${name === current ? '当前' : '切换'}</span>
+          </button>`;
+      }).join('') || '<div class="settings-row"><div><b>暂无已登录账号</b><br><span>可以在下方登录或注册新账号。</span></div></div>';
+    }
+    function selectAccount(username) {
+      const users = loadUsers();
+      if (!users[username]) return;
+      const profile = { ...users[username], loginAt: new Date().toISOString() };
+      delete profile.password;
+      localStorage.setItem('csi_user', JSON.stringify(profile));
+      rememberAccount(username);
+      closeSwitchAccount();
+      loginUser = profile;
+      isOwnProfile = true;
+      user = profile;
+      history.replaceState(null, '', '/home');
+      renderUser();
+      renderHistory();
+      renderGrid(currentTabItems('works'), 'works');
+    }
+    function loginOtherAccount() {
+      closeSwitchAccount();
+      localStorage.removeItem('csi_user');
+      loginUser = null;
+      user = { username:'guest', nickname:'未登录用户', avatar:'客', avatarImage:'', bio:'登录后可编辑资料、发布作品并保存真实互动数据。' };
+      setMode('login');
+      openAuth();
+    }
+    function pct(v) { return `${(Number(v || 0) * 100).toFixed(1)}%`; }
+    async function refresh() {
+      const res = await fetch('/api/state');
+      const s = await res.json();
+      const probs = s.probabilities || {};
+      const maxProb = Math.max(0, ...Object.values(probs).map(Number));
+      document.getElementById('stable').textContent = s.stable_prediction || '等待数据';
+      document.getElementById('packets').textContent = s.packets || 0;
+      document.getElementById('confidence').textContent = Object.keys(probs).length ? pct(maxProb) : '--';
+      if (!s.running) refreshDetectionHistory();
+    }
+    async function init() {
+      loginUser = requireLogin();
+      const target = new URLSearchParams(location.search).get('user');
+      const users = loadUsers();
+      isOwnProfile = !target || (loginUser && target === loginUser.username);
+      if (isOwnProfile) {
+        user = loginUser || { username:'guest', nickname:'未登录用户', avatar:'客', avatarImage:'', bio:'登录后可编辑资料、发布作品并保存真实互动数据。' };
+      } else {
+        user = users[target] ? { ...users[target], password: undefined } : { username: target, nickname: target, avatar: (target || '眠').slice(0,1), avatarImage:'', bio:'该用户暂未完善资料。' };
+      }
+      await refreshProfilePosts();
+      renderUser();
+      await refreshDetectionHistory(true);
+      renderGrid(currentTabItems('works'), 'works');
+      refresh();
+      if (new URLSearchParams(location.search).get('auth') === '1' && !loginUser) {
+        openAuth();
+      }
+    }
+    init();
+    setInterval(() => { if (user) refresh(); }, 900);
+  </script>
+</body>
+</html>

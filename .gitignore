@@ -1,0 +1,34 @@
+# Python cache and runtime files
+__pycache__/
+*.py[cod]
+*.log
+
+# ESP-IDF build outputs
+build/
+managed_components/
+dependencies.lock
+
+# Local machine/editor files
+.vscode/
+*.lock
+
+# Secrets and local credentials
+config.toml
+.env
+
+# Large/generated CSI datasets
+data/*
+!data/multi_group/
+data/multi_group/*
+!data/multi_group/models/
+data/multi_group/models/*
+!data/multi_group/models/csi_state_classifier.joblib
+!data/multi_group/models/csi_state_classifier_meta.json
+
+# Generated/extracted proof or media artifacts
+ppt_media_extract/
+terminal_run_proof.png
+terminal_run_proof.txt
+
+# Optional local skill copies
+installed_skills/

@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>社区 - 无源 WiFi 睡眠监测</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      color: #f8fbff;
+      background:
+        linear-gradient(115deg, rgba(10,11,34,.72), rgba(44,37,76,.44)),
+        url('/assets/stars.jpeg') center / cover fixed;
+    }
+    a { color: inherit; text-decoration: none; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 236px minmax(720px, 1fr) 320px; background: linear-gradient(180deg, rgba(5,8,20,.18), rgba(5,8,20,.58)); }
+    .side, .right { position: sticky; top: 0; height: 100vh; padding: 24px 18px; background: rgba(8,10,16,.58); backdrop-filter: blur(22px); }
+    .side { border-right: 1px solid rgba(255,255,255,.16); }
+    .right { border-left: 1px solid rgba(255,255,255,.16); overflow: auto; }
+    .logo { font-size: 22px; font-weight: 900; margin-bottom: 28px; }
+    .nav { display: grid; gap: 8px; }
+    .nav a { padding: 13px 14px; border-radius: 8px; color: rgba(248,251,255,.76); font-weight: 700; }
+    .nav a.active, .nav a:hover { background: rgba(255,255,255,.13); color: #fff; }
+    main { max-width: 980px; width: 100%; margin: 0 auto; padding: 24px 28px 48px; }
+    .composer, .video, .panel { border: 1px solid rgba(255,255,255,.22); background: linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.09)); backdrop-filter: blur(22px); border-radius: 8px; }
+    .composer { padding: 16px; margin-bottom: 16px; }
+    .discover { padding: 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,.22); background: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.07)); backdrop-filter: blur(22px); border-radius: 8px; }
+    .search-box { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+    .search-box input { margin: 0; border-radius: 999px; padding: 13px 18px; }
+    .recommend-title { margin: 14px 0 10px; color: rgba(248,251,255,.70); font-weight: 900; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip { border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.10); color: rgba(248,251,255,.86); font-weight: 800; cursor: pointer; }
+    .chip:hover { background: rgba(158,231,197,.18); color: #fff; }
+    input, textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.20);
+      background: rgba(255,255,255,.10);
+      color: #fff;
+      border-radius: 8px;
+      padding: 12px;
+      outline: none;
+      margin-bottom: 10px;
+      font-family: inherit;
+    }
+    textarea { min-height: 88px; resize: vertical; line-height: 1.7; }
+    button { border: 0; border-radius: 999px; padding: 10px 16px; color: #062019; background: linear-gradient(90deg, #9ee7c5, #dffff0); font-weight: 900; cursor: pointer; }
+    .video { margin-bottom: 18px; overflow: hidden; cursor: pointer; }
+    .poster { min-height: 190px; display: grid; place-items: end start; padding: 18px; background: linear-gradient(145deg, rgba(17,35,48,.82), rgba(11,13,20,.78)); position: relative; }
+    .video:nth-child(2n) .poster { background: linear-gradient(145deg, rgba(17,43,37,.82), rgba(11,13,20,.78)); }
+    .video:nth-child(3n) .poster { background: linear-gradient(145deg, rgba(45,24,52,.82), rgba(11,13,20,.78)); }
+    .poster h2 { margin: 0; font-size: 26px; line-height: 1.2; max-width: 82%; }
+    .poster .state { position: absolute; top: 14px; left: 14px; border-radius: 999px; padding: 7px 11px; background: rgba(0,0,0,.38); }
+    .post-media { width: 100%; height: min(560px, 68vh); object-fit: cover; display: block; background: rgba(0,0,0,.24); }
+    .multi-media { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 6px; background: rgba(0,0,0,.18); }
+    .multi-media img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px; display: block; }
+    .multi-media.single img { aspect-ratio: 16/10; grid-column: 1 / -1; }
+    .detail-card .multi-media { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 12px; }
+    .media-label { display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 10px 16px; margin: 0 10px 10px 0; background: rgba(255,255,255,.12); font-weight: 900; cursor: pointer; }
+    .media-name { color: rgba(248,251,255,.68); }
+    .author-link { color: #9ee7c5; font-weight: 900; }
+    .post-body { padding: 0 16px 12px; color: rgba(248,251,255,.82); line-height: 1.7; }
+    .post-body .excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .post-body .more { color: #9ee7c5; font-weight: 900; margin-left: 6px; white-space: nowrap; }
+    .meta { display: flex; justify-content: space-between; gap: 14px; padding: 14px 16px; color: rgba(248,251,255,.72); }
+    .actions { display: flex; gap: 12px; padding: 0 16px 16px; flex-wrap: wrap; }
+    .actions button { color: #fff; background: rgba(255,255,255,.12); padding: 9px 13px; }
+    .detail-layer { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.66); backdrop-filter: blur(18px); }
+    .detail-layer.open { display: flex; }
+    .detail-card { width: min(1080px, 100%); max-height: 88vh; overflow: auto; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; background: linear-gradient(145deg, rgba(12,25,34,.96), rgba(22,23,35,.96)); box-shadow: 0 24px 70px rgba(0,0,0,.42); }
+    .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .detail-head h2 { margin: 0; font-size: 28px; line-height: 1.25; }
+    .detail-close { width: 42px; height: 42px; padding: 0; flex: 0 0 auto; color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22); font-size: 24px; }
+    .detail-content { padding: 18px 20px 22px; color: rgba(248,251,255,.86); line-height: 1.9; white-space: pre-wrap; }
+    .detail-card .post-media { height: auto; max-height: 58vh; }
+    .comments { border-top: 1px solid rgba(255,255,255,.12); padding: 18px 20px 22px; }
+    .comments h3 { margin: 0 0 12px; font-size: 20px; }
+    .comment-list { display: grid; gap: 10px; margin-bottom: 14px; }
+    .comment-item { padding: 12px; border-radius: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+    .comment-item b { color: #9ee7c5; }
+    .comment-item span { color: rgba(248,251,255,.58); font-size: 12px; margin-left: 8px; }
+    .comment-item div { margin-top: 6px; line-height: 1.7; color: rgba(248,251,255,.84); }
+    .comment-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+    .comment-form textarea { min-height: 46px; margin: 0; resize: vertical; }
+    .panel { padding: 18px; margin-bottom: 14px; }
+    .side-composer input, .side-composer textarea { margin-bottom: 10px; }
+    .side-composer .media-label { margin-top: 2px; }
+    .side-composer button.primary-publish { width: 100%; margin-top: 6px; }
+    .muted { color: rgba(248,251,255,.68); }
+    .hot, .inbox { display: grid; gap: 12px; margin-top: 12px; }
+    .hot div, .msg { padding: 12px; border-radius: 8px; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.12); }
+    .msg b { display: block; margin-bottom: 5px; }
+    .msg span { color: rgba(248,251,255,.68); font-size: 13px; }
+    @media (max-width: 1280px) { .app { grid-template-columns: 236px minmax(0,1fr); } .right { display: none; } main { max-width: 920px; } }
+    @media (max-width: 1050px) { .app { grid-template-columns: 86px minmax(0,1fr); } .right { display: none; } .logo { font-size: 15px; } .nav a { text-align: center; padding: 12px 6px; } main { max-width: 860px; padding-inline: 18px; } }
+    @media (max-width: 680px) { .app { grid-template-columns: 1fr; } .side { position: static; height: auto; } .nav { grid-template-columns: repeat(3,1fr); } }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,.74), transparent 78%);
+    }
+    .side, .right {
+      background:
+        linear-gradient(180deg, rgba(8,10,16,.82), rgba(8,10,16,.54)),
+        rgba(8,10,16,.58);
+    }
+    .logo {
+      letter-spacing: 0;
+      text-shadow: 0 10px 26px rgba(0,0,0,.34);
+    }
+    .nav a, button, .chip, .media-label {
+      transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    .nav a:hover, button:hover, .chip:hover, .media-label:hover {
+      transform: translateY(-1px);
+      border-color: rgba(158,231,197,.42);
+      box-shadow: 0 10px 28px rgba(0,0,0,.18);
+    }
+    .discover, .composer, .video, .panel, .detail-card {
+      box-shadow: 0 18px 54px rgba(0,0,0,.20);
+    }
+    .discover {
+      position: relative;
+      overflow: hidden;
+    }
+    .discover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(158,231,197,.18), transparent 24%),
+        radial-gradient(circle at 90% 8%, rgba(139,212,255,.14), transparent 22%);
+    }
+    .discover > * { position: relative; z-index: 1; }
+    input, textarea {
+      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    input:focus, textarea:focus {
+      border-color: rgba(158,231,197,.52);
+      background: rgba(255,255,255,.14);
+      box-shadow: 0 0 0 3px rgba(158,231,197,.10);
+    }
+    .video {
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+    .video:hover {
+      transform: translateY(-3px);
+      border-color: rgba(158,231,197,.38);
+      background: linear-gradient(145deg, rgba(255,255,255,.20), rgba(255,255,255,.10));
+    }
+    .post-media, .multi-media img {
+      transition: transform .35s ease, filter .35s ease;
+    }
+    .video:hover .post-media, .video:hover .multi-media img {
+      transform: scale(1.018);
+      filter: saturate(1.08) contrast(1.04);
+    }
+    .poster {
+      overflow: hidden;
+    }
+    .poster::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, transparent 0 44%, rgba(255,255,255,.09) 44% 45%, transparent 45%),
+        radial-gradient(circle at 84% 18%, rgba(158,231,197,.18), transparent 25%);
+    }
+    .poster h2 {
+      position: relative;
+      z-index: 1;
+      text-wrap: balance;
+      text-shadow: 0 14px 34px rgba(0,0,0,.36);
+    }
+    .poster .state { z-index: 1; }
+    .post-body h2 {
+      margin: 14px 0 0;
+      font-size: 22px;
+      line-height: 1.35;
+      text-wrap: balance;
+    }
+    .actions button {
+      border: 1px solid rgba(255,255,255,.16);
+    }
+    .hot div, .msg, .comment-item {
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .hot div:hover, .msg:hover, .comment-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(158,231,197,.32);
+      background: rgba(255,255,255,.13);
+    }
+    .detail-layer.open .detail-card {
+      animation: detailIn .18s ease-out;
+    }
+    @keyframes detailIn {
+      from { transform: translateY(10px); opacity: .72; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @media (max-width: 1050px) {
+      .side { padding: 16px 10px; }
+    }
+    @media (max-width: 680px) {
+      .app { align-content: start; }
+      main { padding-inline: 14px; }
+      .side { height: auto; padding: 16px; }
+      .nav a { text-align: center; }
+      .search-box, .comment-form { grid-template-columns: 1fr; }
+      .post-media { height: min(420px, 58vh); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="logo">WiFiSleep</div>
+      <nav class="nav">
+        <a href="/">实时看板</a>
+        <a href="/home">个人主页</a>
+        <a class="active" href="/community">社区</a>
+      </nav>
+    </aside>
+    <main>
+      <section class="discover">
+        <div class="search-box">
+          <input id="searchInput" placeholder="搜索睡眠知识、CSI 部署、翻身识别或用户作品" oninput="render()" />
+          <button onclick="render()">搜索</button>
+        </div>
+        <div class="recommend-title">热门推荐</div>
+        <div class="chips">
+          <span class="chip" onclick="setSearch('睡眠节律')">睡眠节律</span>
+          <span class="chip" onclick="setSearch('CSI')">CSI 微动</span>
+          <span class="chip" onclick="setSearch('卧室环境')">卧室环境</span>
+          <span class="chip" onclick="setSearch('数据质量')">数据质量</span>
+          <span class="chip" onclick="setSearch('视频')">睡眠视频</span>
+        </div>
+      </section>
+      <section class="composer" style="display:none">
+        <input id="title" placeholder="记录标题，例如：今晚无人状态很稳定" />
+        <textarea id="content" placeholder="分享设备部署、识别体验、睡眠监测结果或调参经验。"></textarea>
+        <label class="media-label" for="postMedia">上传图片或视频</label>
+        <input id="postMedia" type="file" accept="image/*,video/*" style="display:none" onchange="handlePostMedia(event)" />
+        <span id="mediaName" class="media-name">未选择媒体</span>
+        <button onclick="publish()">发布作品</button>
+      </section>
+      <section id="feed"></section>
+    </main>
+    <aside class="right">
+      <section class="panel">
+        <h3>实时状态</h3>
+        <div class="muted" id="liveState">等待数据</div>
+      </section>
+      <section id="messages" class="panel" style="display:none">
+        <h3>私信</h3>
+        <input id="msgTo" placeholder="发送给，例如：项目组成员" />
+        <textarea id="msgText" placeholder="输入私信内容"></textarea>
+        <button onclick="sendMessage()">发送私信</button>
+        <div id="inbox" class="inbox"></div>
+      </section>
+      <section class="panel side-composer">
+        <h3>发布作品</h3>
+        <input id="sideTitle" placeholder="记录标题，例如：今晚睡眠状态记录" />
+        <textarea id="sideContent" placeholder="分享睡眠知识、设备部署、识别体验或调参经验。"></textarea>
+        <label class="media-label" for="sidePostMedia">上传图片或视频</label>
+        <input id="sidePostMedia" type="file" accept="image/*,video/*" style="display:none" onchange="handlePostMedia(event)" />
+        <div id="sideMediaName" class="media-name">未选择媒体</div>
+        <button class="primary-publish" onclick="publishFromSide()">发布作品</button>
+      </section>
+      <section class="panel">
+        <h3>热门话题</h3>
+        <div class="hot">
+          <div># ESP32 CSI 部署</div>
+          <div># 无人静止翻滚三分类</div>
+          <div># 睡眠微动监测</div>
+          <div># 看板可视化</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <div id="postDetail" class="detail-layer" onclick="closePostDetail()">
+    <article class="detail-card" onclick="event.stopPropagation()">
+      <div class="detail-head">
+        <div>
+          <h2 id="detailTitle"></h2>
+          <div id="detailMeta" class="muted"></div>
+        </div>
+        <button class="detail-close" onclick="closePostDetail()" aria-label="关闭">×</button>
+      </div>
+      <div id="detailMedia"></div>
+      <div id="detailContent" class="detail-content"></div>
+      <div id="detailActions" class="actions"></div>
+      <section class="comments">
+        <h3>评论</h3>
+        <div id="detailComments" class="comment-list"></div>
+        <div class="comment-form">
+          <textarea id="commentText" placeholder="写下你的评论"></textarea>
+          <button onclick="submitComment()">发布评论</button>
+        </div>
+      </section>
+    </article>
+  </div>
+  <script>
+    const defaults = [];
+    let pendingMedia = null;
+    let apiPosts = null;
+    let apiAvailable = true;
+    let visiblePosts = [];
+    let activeDetailPostId = '';
+    function makeId() { return `post_${Date.now()}_${Math.random().toString(16).slice(2)}`; }
+    async function apiJson(url, options = {}) {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.detail || data.message || '请求失败');
+      return data;
+    }
+    function toLocalPost(post, viewer) {
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content || '',
+        state: '用户分享',
+        user: post.username,
+        likes: Number(post.likes_count || 0),
+        likedBy: post.liked_by_viewer ? [viewer] : [],
+        mediaData: post.media_url || '',
+        mediaType: post.media_type || '',
+        mediaName: post.media_name || '',
+        createdAt: post.created_at
+      };
+    }
+    async function fetchApiPosts() {
+      const user = currentUser();
+      if (!user || user.source !== 'mysql') return null;
+      try {
+        const data = await apiJson(`/api/posts?viewer=${encodeURIComponent(user.username)}&include_own=false`);
+        apiAvailable = true;
+        apiPosts = data.posts.map(post => toLocalPost(post, user.username));
+        return apiPosts;
+      } catch (error) {
+        apiAvailable = false;
+        console.warn('MySQL 作品接口不可用，使用本地作品兜底。', error);
+        return null;
+      }
+    }
+    function loadPosts() {
+      const posts = (JSON.parse(localStorage.getItem('csi_posts') || 'null') || defaults).filter(post => post.user !== '系统');
+      let changed = false;
+      posts.forEach(post => {
+        if (!post.id) {
+          post.id = makeId();
+          changed = true;
+        }
+        if (!Array.isArray(post.likedBy)) {
+          post.likedBy = [];
+          changed = true;
+        }
+      });
+      if (changed) savePosts(posts);
+      return posts;
+    }
+    function savePosts(posts) { localStorage.setItem('csi_posts', JSON.stringify(posts)); }
+    function currentUser() { return JSON.parse(localStorage.getItem('csi_user') || 'null'); }
+    function userKey(suffix, user) { return `csi_${suffix}_${user.username || 'demo'}`; }
+    function loadUserList(suffix, user) { return JSON.parse(localStorage.getItem(userKey(suffix, user)) || '[]'); }
+    function saveUserList(suffix, user, list) { localStorage.setItem(userKey(suffix, user), JSON.stringify([...new Set(list)])); }
+    function setSearch(keyword) {
+      document.getElementById('searchInput').value = keyword;
+      render();
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
+    }
+    function shortText(value, length = 82) {
+      const text = String(value || '').trim();
+      return text.length > length ? `${text.slice(0, length)}...` : text;
+    }
+    async function fetchApiPosts() {
+      const user = currentUser();
+      const viewer = user && user.source === 'mysql' ? user.username : '';
+      const query = viewer ? `viewer=${encodeURIComponent(viewer)}&include_own=false` : 'include_own=true';
+      try {
+        const data = await apiJson(`/api/posts?${query}`);
+        apiAvailable = true;
+        apiPosts = data.posts.map(post => toLocalPost(post, viewer));
+        return apiPosts;
+      } catch (error) {
+        apiAvailable = false;
+        console.warn('MySQL 作品接口不可用，使用本地作品兜底。', error);
+        return null;
+      }
+    }
+    function mediaHtml(post) {
+      if (!post.mediaData) return '';
+      if (post.mediaType && post.mediaType.startsWith('video/')) {
+        return `<video class="post-media" controls src="${post.mediaData}"></video>`;
+      }
+      return `<img class="post-media" src="${post.mediaData}" alt="作品媒体" />`;
+    }
+    function requireUser() {
+      const user = currentUser();
+      if (!user) {
+        alert('请先进入个人主页完成登录或注册。');
+        location.href = '/home';
+        return null;
+      }
+      return user;
+    }
+    async function legacyRenderDisabled() {
+      const user = currentUser();
+      const dbPosts = await fetchApiPosts();
+      const posts = dbPosts || loadPosts().filter(post => !user || post.user !== user.username);
+      document.getElementById('feed').innerHTML = posts.map((p, i) => `
+        <article class="video">
+          <div class="poster">
+            <span class="state">${p.state || '用户分享'}</span>
+            <h2>${p.title}</h2>
+          </div>
+          ${mediaHtml(p)}
+          <div class="meta"><a class="author-link" href="/home?user=${encodeURIComponent(p.user || 'demo')}">@${p.user || 'demo'}</a><span>${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}</span></div>
+          <div class="meta" style="padding-top:0">${p.content}</div>
+          <div class="actions">
+            <button onclick="likePost('${p.id}')">${user && Array.isArray(p.likedBy) && p.likedBy.includes(user.username) ? '取消喜欢' : '喜欢'} ${p.likes || 0}</button>
+            <button onclick="quickMessage('${p.user || 'demo'}')">私信</button>
+            <button onclick="savePost('${p.id}')">收藏</button>
+          </div>
+        </article>`).join('');
+    }
+    function mediaHtml(post) {
+      if (!post.mediaData) return '';
+      if (post.mediaType === 'application/json+multi-image') {
+        let items = [];
+        try { items = JSON.parse(post.mediaData); } catch (error) { items = []; }
+        const images = items.filter(item => item && item.url).slice(0, 9);
+        if (!images.length) return '';
+        return `<div class="multi-media ${images.length === 1 ? 'single' : ''}">${images.map(item => `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name || '多图内容')}" />`).join('')}</div>`;
+      }
+      if (post.mediaType && post.mediaType.startsWith('video/')) {
+        return `<video class="post-media" controls src="${escapeHtml(post.mediaData)}" onclick="event.stopPropagation()"></video>`;
+      }
+      return `<img class="post-media" src="${escapeHtml(post.mediaData)}" alt="作品媒体" />`;
+    }
+    async function render() {
+      const user = currentUser();
+      const dbPosts = await fetchApiPosts();
+      const keyword = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+      const sourcePosts = dbPosts || loadPosts().filter(post => !user || post.user !== user.username);
+      const posts = keyword
+        ? sourcePosts.filter(post => [post.title, post.content, post.user, post.mediaName].some(value => String(value || '').toLowerCase().includes(keyword)))
+        : sourcePosts;
+      visiblePosts = posts;
+      if (!posts.length) {
+        document.getElementById('feed').innerHTML = `<div class="panel muted">没有找到相关内容，换个关键词试试。</div>`;
+        return;
+      }
+      document.getElementById('feed').innerHTML = posts.map((p) => {
+        const longContent = String(p.content || '').length > 82;
+        const liked = user && Array.isArray(p.likedBy) && p.likedBy.includes(user.username);
+        return `
+        <article class="video" onclick="openPostDetail('${p.id}')">
+          ${p.mediaData ? mediaHtml(p) : `
+            <div class="poster">
+              <span class="state">${escapeHtml(p.state || '用户分享')}</span>
+              <h2>${escapeHtml(p.title)}</h2>
+            </div>
+          `}
+          ${p.mediaData ? `<div class="post-body"><h2>${escapeHtml(p.title)}</h2></div>` : ''}
+          <div class="meta"><a class="author-link" href="/home?user=${encodeURIComponent(p.user || 'demo')}" onclick="event.stopPropagation()">@${escapeHtml(p.user || 'demo')}</a><span>${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}</span></div>
+          <div class="post-body"><span class="excerpt">${escapeHtml(shortText(p.content || ''))}${longContent ? '<span class="more">查看详情</span>' : ''}</span></div>
+          <div class="actions">
+            <button onclick="event.stopPropagation(); likePost('${p.id}')">${liked ? '取消喜欢' : '喜欢'} ${p.likes || 0}</button>
+            <button onclick="event.stopPropagation(); quickMessage('${p.user || 'demo'}')">私信</button>
+            <button onclick="event.stopPropagation(); savePost('${p.id}')">收藏</button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+    function openPostDetail(postId) {
+      const post = visiblePosts.find(item => item.id === postId);
+      if (!post) return;
+      activeDetailPostId = postId;
+      const user = currentUser();
+      const liked = user && Array.isArray(post.likedBy) && post.likedBy.includes(user.username);
+      document.getElementById('detailTitle').textContent = post.title || '';
+      document.getElementById('detailMeta').innerHTML = `<a class="author-link" href="/home?user=${encodeURIComponent(post.user || 'demo')}">@${escapeHtml(post.user || 'demo')}</a> · ${post.createdAt ? new Date(post.createdAt).toLocaleString() : new Date().toLocaleString()}`;
+      document.getElementById('detailMedia').innerHTML = mediaHtml(post);
+      document.getElementById('detailContent').textContent = post.content || '暂无正文内容。';
+      document.getElementById('detailActions').innerHTML = `
+        <button onclick="likePost('${post.id}')">${liked ? '取消喜欢' : '喜欢'} ${post.likes || 0}</button>
+        <button onclick="quickMessage('${post.user || 'demo'}')">私信</button>
+        <button onclick="savePost('${post.id}')">收藏</button>
+      `;
+      document.getElementById('postDetail').classList.add('open');
+      renderComments(postId);
+    }
+    function closePostDetail() {
+      document.getElementById('postDetail').classList.remove('open');
+      activeDetailPostId = '';
+      document.getElementById('commentText').value = '';
+    }
+    function commentKey(postId) { return `csi_comments_${postId}`; }
+    function loadLocalComments(postId) { return JSON.parse(localStorage.getItem(commentKey(postId)) || '[]'); }
+    function saveLocalComments(postId, comments) { localStorage.setItem(commentKey(postId), JSON.stringify(comments)); }
+    function commentAuthorHtml(username) {
+      const current = currentUser();
+      const name = username || 'demo';
+      if (current && current.username === name) return `<b>@${escapeHtml(name)}</b>`;
+      return `<a class="author-link" href="/home?user=${encodeURIComponent(name)}">@${escapeHtml(name)}</a>`;
+    }
+    function renderCommentList(comments) {
+      document.getElementById('detailComments').innerHTML = comments.map(comment => `
+        <article class="comment-item">
+          ${commentAuthorHtml(comment.username)}<span>${comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}</span>
+          <div>${escapeHtml(comment.content || '')}</div>
+        </article>
+      `).join('') || '<div class="muted">暂无评论，来说第一句。</div>';
+    }
+    async function renderComments(postId) {
+      if (!postId) return;
+      if (apiAvailable) {
+        try {
+          const data = await apiJson(`/api/posts/${encodeURIComponent(postId)}/comments`);
+          renderCommentList(data.comments || []);
+          return;
+        } catch (error) {
+          console.warn('MySQL 评论接口不可用，使用本地评论兜底。', error);
+        }
+      }
+      renderCommentList(loadLocalComments(postId));
+    }
+    async function submitComment() {
+      const user = requireUser();
+      if (!user || !activeDetailPostId) return;
+      const text = document.getElementById('commentText').value.trim();
+      if (!text) return alert('请输入评论内容。');
+      if (user.source === 'mysql' && apiAvailable) {
+        try {
+          await apiJson(`/api/posts/${encodeURIComponent(activeDetailPostId)}/comments`, {
+            method: 'POST',
+            body: JSON.stringify({ post_id: activeDetailPostId, username: user.username, content: text })
+          });
+          document.getElementById('commentText').value = '';
+          await renderComments(activeDetailPostId);
+          return;
+        } catch (error) {
+          console.warn('MySQL 评论发布失败，使用本地评论兜底。', error);
+        }
+      }
+      const comments = loadLocalComments(activeDetailPostId);
+      comments.push({ username: user.username || 'demo', content: text, created_at: new Date().toISOString() });
+      saveLocalComments(activeDetailPostId, comments);
+      document.getElementById('commentText').value = '';
+      renderCommentList(comments);
+    }
+    function updateMediaName(name) {
+      document.getElementById('mediaName').textContent = name || '未选择媒体';
+      const sideName = document.getElementById('sideMediaName');
+      if (sideName) sideName.textContent = name || '未选择媒体';
+    }
+    function setPendingMediaFromFile(file, source = 'upload') {
+      if (!file) {
+        pendingMedia = null;
+        updateMediaName('');
+        return false;
+      }
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        alert('请选择图片或视频文件。');
+        pendingMedia = null;
+        updateMediaName('');
+        return false;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('演示版媒体建议小于 5MB，避免浏览器本地存储超限。');
+        pendingMedia = null;
+        updateMediaName('');
+        return false;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const suffix = file.type.split('/')[1] || 'media';
+        const name = file.name || `粘贴图片-${new Date().toISOString().replace(/[:.]/g, '-')}.${suffix}`;
+        pendingMedia = { data: String(reader.result || ''), type: file.type, name };
+        updateMediaName(source === 'paste' ? `${name}（已粘贴）` : name);
+      };
+      reader.readAsDataURL(file);
+      return true;
+    }
+    function handleContentPaste(event) {
+      const items = Array.from(event.clipboardData?.items || []);
+      const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
+      if (!imageItem) return;
+      const file = imageItem.getAsFile();
+      if (!file) return;
+      setPendingMediaFromFile(file, 'paste');
+    }
+    function handlePostMedia(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!setPendingMediaFromFile(file)) {
+        event.target.value = '';
+      }
+    }
+    async function publishFromSide() {
+      document.getElementById('title').value = document.getElementById('sideTitle').value;
+      document.getElementById('content').value = document.getElementById('sideContent').value;
+      await publish();
+      document.getElementById('sideTitle').value = '';
+      document.getElementById('sideContent').value = '';
+      document.getElementById('sidePostMedia').value = '';
+      const sideName = document.getElementById('sideMediaName');
+      if (sideName) sideName.textContent = '未选择媒体';
+    }
+    async function publish() {
+      const user = requireUser();
+      if (!user) return;
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      if (!title || (!content && !pendingMedia)) return alert('请填写标题，并添加文字、图片或视频内容。');
+      if (user.source === 'mysql') {
+        try {
+          await apiJson('/api/posts', {
+            method: 'POST',
+            body: JSON.stringify({
+              username: user.username,
+              title,
+              content,
+              media_url: pendingMedia ? pendingMedia.data : '',
+              media_type: pendingMedia ? pendingMedia.type : '',
+              media_name: pendingMedia ? pendingMedia.name : ''
+            })
+          });
+          document.getElementById('title').value = '';
+          document.getElementById('content').value = '';
+          document.getElementById('postMedia').value = '';
+          updateMediaName('');
+          pendingMedia = null;
+          await render();
+          return;
+        } catch (error) {
+          console.warn('MySQL 发布失败，使用本地发布兜底。', error);
+        }
+      }
+      const posts = loadPosts();
+      posts.unshift({
+        id: makeId(),
+        title,
+        content,
+        state:'用户分享',
+        user:user.username || 'demo',
+        likes:0,
+        likedBy:[],
+        mediaData: pendingMedia ? pendingMedia.data : '',
+        mediaType: pendingMedia ? pendingMedia.type : '',
+        mediaName: pendingMedia ? pendingMedia.name : '',
+        createdAt:new Date().toISOString()
+      });
+      savePosts(posts);
+      document.getElementById('title').value = '';
+      document.getElementById('content').value = '';
+      document.getElementById('postMedia').value = '';
+      updateMediaName('');
+      pendingMedia = null;
+      render();
+    }
+    async function likePost(postId) {
+      const user = requireUser();
+      if (!user) return;
+      if (user.source === 'mysql' && apiAvailable) {
+        try {
+          const result = await apiJson(`/api/posts/${encodeURIComponent(postId)}/like`, {
+            method: 'POST',
+            body: JSON.stringify({ username: user.username })
+          });
+          const liked = loadUserList('liked_posts', user);
+          const nextLiked = result.liked
+            ? [postId, ...liked.filter(id => id !== postId)]
+            : liked.filter(id => id !== postId);
+          saveUserList('liked_posts', user, nextLiked);
+          await render();
+          return;
+        } catch (error) {
+          console.warn('MySQL 点赞失败，使用本地点赞兜底。', error);
+        }
+      }
+      const posts = loadPosts();
+      const post = posts.find(item => item.id === postId);
+      if (!post) return;
+      post.likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+      const liked = loadUserList('liked_posts', user);
+      if (post.likedBy.includes(user.username)) {
+        post.likedBy = post.likedBy.filter(name => name !== user.username);
+        post.likes = Math.max(0, Number(post.likes || 0) - 1);
+        saveUserList('liked_posts', user, liked.filter(id => id !== post.id));
+      } else {
+        post.likes = Number(post.likes || 0) + 1;
+        post.likedBy.push(user.username);
+        liked.unshift(post.id);
+        saveUserList('liked_posts', user, liked);
+      }
+      savePosts(posts);
+      render();
+    }
+    async function savePost(postId) {
+      const user = requireUser();
+      if (!user) return;
+      if (user.source === 'mysql' && apiAvailable) {
+        try {
+          const result = await apiJson(`/api/posts/${encodeURIComponent(postId)}/favorite`, {
+            method: 'POST',
+            body: JSON.stringify({ username: user.username })
+          });
+          const saved = loadUserList('saved_posts', user);
+          const nextSaved = result.favorited
+            ? [postId, ...saved.filter(id => id !== postId)]
+            : saved.filter(id => id !== postId);
+          saveUserList('saved_posts', user, nextSaved);
+          await render();
+          return;
+        } catch (error) {
+          console.warn('MySQL 收藏失败，使用本地收藏兜底。', error);
+        }
+      }
+      const posts = loadPosts();
+      const post = posts.find(item => item.id === postId);
+      if (!post) return;
+      const saved = loadUserList('saved_posts', user);
+      saved.unshift(post.id);
+      saveUserList('saved_posts', user, saved);
+      alert('已收藏。');
+    }
+    function loadMessages() { return JSON.parse(localStorage.getItem('csi_messages') || '[]'); }
+    function saveMessages(messages) { localStorage.setItem('csi_messages', JSON.stringify(messages)); }
+    async function renderMessages() {
+      const user = currentUser();
+      let messages = loadMessages();
+      if (user && user.source === 'mysql') {
+        try {
+          const data = await apiJson(`/api/messages?username=${encodeURIComponent(user.username)}`);
+          messages = data.messages.map(m => ({
+            from: m.sender,
+            to: m.receiver,
+            text: m.content,
+            time: m.created_at
+          }));
+        } catch (error) {
+          console.warn('MySQL 私信接口不可用，使用本地私信兜底。', error);
+        }
+      }
+      document.getElementById('inbox').innerHTML = messages.map(m => `
+        <div class="msg"><b>发给 ${m.to}</b><span>${m.time}</span><div>${m.text}</div></div>
+      `).join('') || '<div class="muted">暂无私信</div>';
+    }
+    function applyMessageTargetFromHash() {
+      if (!location.hash.startsWith('#messages')) return;
+      const [, rawTo] = location.hash.split(':');
+      if (rawTo) document.getElementById('msgTo').value = decodeURIComponent(rawTo);
+      document.getElementById('msgText').focus();
+    }
+    async function sendMessage() {
+      const user = requireUser();
+      if (!user) return;
+      const to = document.getElementById('msgTo').value.trim() || '项目组成员';
+      const text = document.getElementById('msgText').value.trim();
+      if (!text) return alert('请输入私信内容。');
+      if (user.source === 'mysql') {
+        try {
+          await apiJson('/api/messages', {
+            method: 'POST',
+            body: JSON.stringify({ sender: user.username, receiver: to, content: text })
+          });
+          document.getElementById('msgText').value = '';
+          await renderMessages();
+          return;
+        } catch (error) {
+          console.warn('MySQL 私信发送失败，使用本地私信兜底。', error);
+        }
+      }
+      const messages = loadMessages();
+      messages.unshift({ to, text, from:user.username || 'demo', time: new Date().toLocaleString() });
+      saveMessages(messages);
+      document.getElementById('msgText').value = '';
+      renderMessages();
+    }
+    function quickMessage(to) {
+      const user = requireUser();
+      if (!user) return;
+      document.getElementById('msgTo').value = to;
+      document.getElementById('msgText').focus();
+      location.hash = 'messages';
+    }
+    async function refresh() {
+      const res = await fetch('/api/state');
+      const s = await res.json();
+      document.getElementById('liveState').textContent = `稳定状态：${s.stable_prediction || '等待数据'} - 包数：${s.packets || 0}`;
+    }
+    document.getElementById('content').addEventListener('paste', handleContentPaste);
+    document.getElementById('sideContent').addEventListener('paste', handleContentPaste);
+    render(); renderMessages(); applyMessageTargetFromHash(); setInterval(refresh, 1000); refresh();
+  </script>
+</body>
+</html>
